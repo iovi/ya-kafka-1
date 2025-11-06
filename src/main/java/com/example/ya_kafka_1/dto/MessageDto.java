@@ -5,9 +5,9 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class Message {
+public class MessageDto {
 
-    private String uid;
+    private Long id;
 
     private String messageText;
 
