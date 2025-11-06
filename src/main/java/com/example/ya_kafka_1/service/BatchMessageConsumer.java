@@ -17,11 +17,11 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 
+
 @Slf4j
 @Service
-public class SingleMessageConsumer {
-
-    private KafkaConsumer<String, MessageDto> consumer;
+public class BatchMessageConsumer {
+    private KafkaConsumer<String, MessageDto> consumer2;
 
     @PostConstruct
     public void setUpConsumer() {
@@ -30,33 +30,30 @@ public class SingleMessageConsumer {
         properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class.getName());
         properties.put(JsonDeserializer.TRUSTED_PACKAGES, "com.example.ya_kafka_1.dto");
-        properties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "1");
-        properties.put(ConsumerConfig.FETCH_MAX_BYTES_CONFIG, "200");
-        properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
-        properties.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
-        properties.put(ConsumerConfig.GROUP_ID_CONFIG, "group1");
-        consumer = new KafkaConsumer<>(properties);
+        properties.put(ConsumerConfig.FETCH_MAX_BYTES_CONFIG, "3000");
+        properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+        properties.put(ConsumerConfig.GROUP_ID_CONFIG, "group2");
+        consumer2 = new KafkaConsumer<>(properties);
 
         // Подписка на топик
-        consumer.subscribe(Collections.singletonList("ya_topic"));
+        consumer2.subscribe(Collections.singletonList("ya_topic"));
     }
 
     @PreDestroy
     public void closeProducer() {
-        consumer.close();
+        consumer2.close();
     }
 
-    @Scheduled(fixedDelay = 2000)
-    public void getSingleMessage() {
-        ConsumerRecords<String, MessageDto> records = consumer.poll(Duration.ofMillis(100));
-        if (!records.isEmpty()) {
-            int count = records.count();
-            if (count > 1) {
-                log.error("SingleMessageConsumer got too many records: {}", count);
-            }
+    @Scheduled(fixedDelay = 10000)
+    public void getBatch() {
+        ConsumerRecords<String, MessageDto> records = consumer2.poll(Duration.ofMillis(1000));
+        int i = 0, count = records.count();
+
+        if (count >= 10) {
             for (ConsumerRecord<String, MessageDto> record : records) {
-                log.info("SingleMessageConsumer consumed: {}", record.value());
+                log.info("BatchMessageConsumer consumed: {} - {}", i++, record.value());
             }
+            consumer2.commitSync();
         }
     }
 }

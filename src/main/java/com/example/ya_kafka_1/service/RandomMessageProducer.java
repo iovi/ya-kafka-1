@@ -2,16 +2,15 @@ package com.example.ya_kafka_1.service;
 
 import com.example.ya_kafka_1.dto.MessageDto;
 import com.example.ya_kafka_1.util.RandomMessageUtilService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import org.springframework.kafka.support.serializer.JsonSerializer;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -23,9 +22,7 @@ import java.util.stream.Stream;
 
 @Slf4j
 @Service
-public class RandomProducer {
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
+public class RandomMessageProducer {
 
     private KafkaProducer<String, MessageDto> producer;
 
@@ -47,16 +44,13 @@ public class RandomProducer {
     }
 
     @SneakyThrows
-    @Scheduled(fixedRate = 4000)
+    @Scheduled(fixedRate = 2000)
     public void sendRecord() {
         //создание сообщения
         MessageDto messageDto = new MessageDto();
         messageDto.setId(random.nextLong());
         messageDto.setMessageText(Stream.generate(RandomMessageUtilService::getRandomWord)
                 .limit(3).collect(Collectors.joining(" "))); //текст из трёх слов
-
-        //вывод сообщения
-        //String jsonString = objectMapper.writeValueAsString(messageDto);
         log.info("produced: {}", messageDto);
 
         // отправка сообщения с uuid-ключом
