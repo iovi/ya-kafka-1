@@ -47,21 +47,21 @@ public class RandomProducer {
     }
 
     @SneakyThrows
-    @Scheduled(fixedRate = 5000)
-    public void checkRecords() {
-
+    @Scheduled(fixedRate = 4000)
+    public void sendRecord() {
         //создание сообщения
         MessageDto messageDto = new MessageDto();
         messageDto.setId(random.nextLong());
         messageDto.setMessageText(Stream.generate(RandomMessageUtilService::getRandomWord)
-                .limit(3).collect(Collectors.joining(" ")));
+                .limit(3).collect(Collectors.joining(" "))); //текст из трёх слов
 
         //вывод сообщения
-        String jsonString = objectMapper.writeValueAsString(messageDto);
-        log.info(jsonString);
+        //String jsonString = objectMapper.writeValueAsString(messageDto);
+        log.info("produced: {}", messageDto);
 
         // отправка сообщения с uuid-ключом
-        ProducerRecord<String, MessageDto> record = new ProducerRecord<>("ya_topic", UUID.randomUUID().toString(), messageDto);
+        ProducerRecord<String, MessageDto> record = new ProducerRecord<>("ya_topic", UUID.randomUUID().toString(),
+                messageDto);
         producer.send(record);
     }
 }
