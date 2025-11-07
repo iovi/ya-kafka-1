@@ -32,9 +32,10 @@ public class RandomMessageProducer {
     public void setUpProducer() {
         Properties properties = new Properties();
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9094");
-        properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class.getName());
-
+        properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName()); //ключ сериализуется как строка
+        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class.getName()); //значение сериализуется как json
+        properties.put(ProducerConfig.ACKS_CONFIG, "all"); //дожидаемся ответов от всех реплик
+        properties.put(ProducerConfig.RETRIES_CONFIG, 100); //сделаем большое количество попыток для отправки at least once
         producer = new KafkaProducer<>(properties);
     }
 
@@ -44,7 +45,7 @@ public class RandomMessageProducer {
     }
 
     @SneakyThrows
-    @Scheduled(fixedRate = 2000)
+    @Scheduled(fixedDelay = 2000)
     public void sendRecord() {
         //создание сообщения
         MessageDto messageDto = new MessageDto();

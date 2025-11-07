@@ -23,17 +23,18 @@ public class SingleMessageConsumer {
 
     private KafkaConsumer<String, MessageDto> consumer;
 
+    private final String workingPeriodMs = "1000";
+
     @PostConstruct
     public void setUpConsumer() {
         Properties properties = new Properties();
         properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9094");
-        properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class.getName());
-        properties.put(JsonDeserializer.TRUSTED_PACKAGES, "com.example.ya_kafka_1.dto");
-        properties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "1");
-        properties.put(ConsumerConfig.FETCH_MAX_BYTES_CONFIG, "200");
-        properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
-        properties.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
+        properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()); //ключ десериализуется как строка
+        properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class.getName()); //значение десериализуется как json
+        properties.put(JsonDeserializer.TRUSTED_PACKAGES, "com.example.ya_kafka_1.dto"); //пакет с dto значения должен быть доверенным для десериализации
+        properties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "1");  // выбираем по одной записи
+        properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true"); // применение offset автоматическое
+        properties.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, workingPeriodMs); // автоматическое применение каждые ... мс
         properties.put(ConsumerConfig.GROUP_ID_CONFIG, "group1");
         consumer = new KafkaConsumer<>(properties);
 
@@ -46,7 +47,7 @@ public class SingleMessageConsumer {
         consumer.close();
     }
 
-    @Scheduled(fixedDelay = 2000)
+    @Scheduled(fixedDelayString = workingPeriodMs)
     public void getSingleMessage() {
         ConsumerRecords<String, MessageDto> records = consumer.poll(Duration.ofMillis(100));
         if (!records.isEmpty()) {

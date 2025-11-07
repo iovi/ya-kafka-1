@@ -27,11 +27,11 @@ public class BatchMessageConsumer {
     public void setUpConsumer() {
         Properties properties = new Properties();
         properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9094");
-        properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class.getName());
-        properties.put(JsonDeserializer.TRUSTED_PACKAGES, "com.example.ya_kafka_1.dto");
-        properties.put(ConsumerConfig.FETCH_MAX_BYTES_CONFIG, "3000");
-        properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+        properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()); //ключ десериализуется как строка
+        properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class.getName()); //значение десериализуется как json
+        properties.put(JsonDeserializer.TRUSTED_PACKAGES, "com.example.ya_kafka_1.dto"); //пакет с dto значения должен быть доверенным для десериализации
+        properties.put(ConsumerConfig.FETCH_MAX_BYTES_CONFIG, "3000"); //максимальное количество байт за один poll
+        properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false"); //автоматически offset не применяем
         properties.put(ConsumerConfig.GROUP_ID_CONFIG, "group2");
         consumer2 = new KafkaConsumer<>(properties);
 
@@ -46,7 +46,7 @@ public class BatchMessageConsumer {
 
     @Scheduled(fixedDelay = 10000)
     public void getBatch() {
-        ConsumerRecords<String, MessageDto> records = consumer2.poll(Duration.ofMillis(1000));
+        ConsumerRecords<String, MessageDto> records = consumer2.poll(Duration.ofMillis(100));
         int i = 0, count = records.count();
 
         if (count >= 10) {
