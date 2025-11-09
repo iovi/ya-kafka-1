@@ -26,7 +26,7 @@ public class SingleMessageConsumer {
     @Value("${my.kafka.address}")
     private String kafkaAddress;
 
-    private KafkaConsumer<String, MessageDto> consumer;
+    private KafkaConsumer<Long, MessageDto> consumer;
 
     private final String workingPeriodMs = "1000";
 
@@ -55,14 +55,14 @@ public class SingleMessageConsumer {
     @Scheduled(fixedDelayString = workingPeriodMs)
     public void getSingleMessage() {
         try {
-            ConsumerRecords<String, MessageDto> records = consumer.poll(Duration.ofMillis(100));
+            ConsumerRecords<Long, MessageDto> records = consumer.poll(Duration.ofMillis(100));
 
             if (!records.isEmpty()) {
                 int count = records.count();
                 if (count > 1) {
                     log.error("SingleMessageConsumer got too many records: {}", count);
                 }
-                for (ConsumerRecord<String, MessageDto> record : records) {
+                for (ConsumerRecord<Long, MessageDto> record : records) {
                     log.info("SingleMessageConsumer consumed: {}", record.value());
                 }
             }
