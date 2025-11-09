@@ -35,7 +35,8 @@ public class BatchMessageConsumer {
         properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()); //ключ десериализуется как строка
         properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class.getName()); //значение десериализуется как json
         properties.put(JsonDeserializer.TRUSTED_PACKAGES, "com.example.ya_kafka_1.dto"); //пакет с dto значения должен быть доверенным для десериализации
-        properties.put(ConsumerConfig.FETCH_MAX_BYTES_CONFIG, "3000"); //максимальное количество байт за один poll
+        properties.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, "2000"); //минимальное количество байт за один poll, указано, чтобы бралось не менее 10 сообщений
+        properties.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, "20000"); //ждём подольше, чтобы набралось достаточное количество сообщений
         properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false"); //автоматически offset не применяем
         properties.put(ConsumerConfig.GROUP_ID_CONFIG, "group2");
         consumer2 = new KafkaConsumer<>(properties);
@@ -52,15 +53,13 @@ public class BatchMessageConsumer {
     @Scheduled(fixedDelay = 10000)
     public void getBatch() {
         try {
-            ConsumerRecords<String, MessageDto> records = consumer2.poll(Duration.ofMillis(100));
-            int i = 0, count = records.count();
-
-            if (count >= 10) {
-                for (ConsumerRecord<String, MessageDto> record : records) {
-                    log.info("BatchMessageConsumer consumed: {} - {}", i++, record.value());
-                }
-                consumer2.commitSync();
+            ConsumerRecords<String, MessageDto> records = consumer2.poll(Duration.ofSeconds(20));
+            int i = 1;
+            for (ConsumerRecord<String, MessageDto> record : records) {
+                log.info("BatchMessageConsumer consumed: {} - {}", i++, record.value());
             }
+            consumer2.commitSync();
+
         } catch (RecordDeserializationException rde) {
             log.error("BatchMessageConsumer deserialization error: {}", rde.getMessage());
         }
