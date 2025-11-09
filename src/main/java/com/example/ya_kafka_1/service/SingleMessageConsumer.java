@@ -8,7 +8,9 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.errors.RecordDeserializationException;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,9 @@ import java.util.Properties;
 @Service
 public class SingleMessageConsumer {
 
+    @Value("${my.kafka.address}")
+    private String kafkaAddress;
+
     private KafkaConsumer<String, MessageDto> consumer;
 
     private final String workingPeriodMs = "1000";
@@ -28,7 +33,7 @@ public class SingleMessageConsumer {
     @PostConstruct
     public void setUpConsumer() {
         Properties properties = new Properties();
-        properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9094");
+        properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaAddress);
         properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()); //ключ десериализуется как строка
         properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class.getName()); //значение десериализуется как json
         properties.put(JsonDeserializer.TRUSTED_PACKAGES, "com.example.ya_kafka_1.dto"); //пакет с dto значения должен быть доверенным для десериализации
@@ -49,15 +54,20 @@ public class SingleMessageConsumer {
 
     @Scheduled(fixedDelayString = workingPeriodMs)
     public void getSingleMessage() {
-        ConsumerRecords<String, MessageDto> records = consumer.poll(Duration.ofMillis(100));
-        if (!records.isEmpty()) {
-            int count = records.count();
-            if (count > 1) {
-                log.error("SingleMessageConsumer got too many records: {}", count);
+        try {
+            ConsumerRecords<String, MessageDto> records = consumer.poll(Duration.ofMillis(100));
+
+            if (!records.isEmpty()) {
+                int count = records.count();
+                if (count > 1) {
+                    log.error("SingleMessageConsumer got too many records: {}", count);
+                }
+                for (ConsumerRecord<String, MessageDto> record : records) {
+                    log.info("SingleMessageConsumer consumed: {}", record.value());
+                }
             }
-            for (ConsumerRecord<String, MessageDto> record : records) {
-                log.info("SingleMessageConsumer consumed: {}", record.value());
-            }
+        } catch (RecordDeserializationException rde) {
+            log.error("SingleMessageConsumer deserialization error: {}", rde.getMessage());
         }
     }
 }

@@ -4,12 +4,12 @@ import com.example.ya_kafka_1.dto.MessageDto;
 import com.example.ya_kafka_1.util.RandomMessageUtilService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.common.errors.SerializationException;
+import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -24,6 +24,9 @@ import java.util.stream.Stream;
 @Service
 public class RandomMessageProducer {
 
+    @Value("${my.kafka.address}")
+    private String kafkaAddress;
+
     private KafkaProducer<String, MessageDto> producer;
 
     private final Random random = new Random();
@@ -31,7 +34,7 @@ public class RandomMessageProducer {
     @PostConstruct
     public void setUpProducer() {
         Properties properties = new Properties();
-        properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9094");
+        properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaAddress);
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName()); //ключ сериализуется как строка
         properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class.getName()); //значение сериализуется как json
         properties.put(ProducerConfig.ACKS_CONFIG, "all"); //дожидаемся ответов от всех реплик
@@ -44,7 +47,6 @@ public class RandomMessageProducer {
         producer.close();
     }
 
-    @SneakyThrows
     @Scheduled(fixedDelay = 2000)
     public void sendRecord() {
         //создание сообщения
@@ -52,11 +54,21 @@ public class RandomMessageProducer {
         messageDto.setId(random.nextLong());
         messageDto.setMessageText(Stream.generate(RandomMessageUtilService::getRandomWord)
                 .limit(3).collect(Collectors.joining(" "))); //текст из трёх слов
-        log.info("produced: {}", messageDto);
 
         // отправка сообщения с uuid-ключом
         ProducerRecord<String, MessageDto> record = new ProducerRecord<>("ya_topic", UUID.randomUUID().toString(),
                 messageDto);
-        producer.send(record);
+        try {
+            producer.send(record, (metadata, e) -> {
+                if (e == null) {
+                    log.info("Produced and sent: {}", messageDto);
+                } else {
+                    log.error("Error sending message {}: {}", messageDto, e.getMessage());
+                }
+            });
+        } catch (SerializationException se) {
+            log.error("Serialization exception for message {}: {}", messageDto, se.getMessage());
+        }
+
     }
 }
